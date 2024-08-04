@@ -5,47 +5,39 @@ class TeamAssigner:
         self.team_colors = {}
         self.player_team_dict = {}
     
-    def get_clustering_model(self,image):
-        # Reshape the image to 2D array
-        image_2d = image.reshape(-1,3)
-
-        # Preform K-means with 2 clusters
-        kmeans = KMeans(n_clusters=2, init="k-means++",n_init=1)
+    class TeamAssigner:
+    def get_clustering_model(self, image):
+        image_2d = image.reshape(-1, 3)
+        if image_2d.shape[0] == 0:
+            return None  # Return None if the image is empty
+        kmeans = KMeans(n_clusters=1, n_init=10)
         kmeans.fit(image_2d)
-
         return kmeans
 
-    def get_player_color(self,frame,bbox):
-        image = frame[int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])]
-
-        top_half_image = image[0:int(image.shape[0]/2),:]
-
-        # Get Clustering model
+    def get_player_color(self, frame, bbox):
+        x, y, w, h = bbox
+        player_image = frame[y:y+h, x:x+w]
+        if player_image.size == 0:
+            return None  # Return None if the cropped image is empty
+        top_half_image = player_image[:h//2, :, :]
         kmeans = self.get_clustering_model(top_half_image)
-
-        # Get the cluster labels forr each pixel
-        labels = kmeans.labels_
-
-        # Reshape the labels to the image shape
-        clustered_image = labels.reshape(top_half_image.shape[0],top_half_image.shape[1])
-
-        # Get the player cluster
-        corner_clusters = [clustered_image[0,0],clustered_image[0,-1],clustered_image[-1,0],clustered_image[-1,-1]]
-        non_player_cluster = max(set(corner_clusters),key=corner_clusters.count)
-        player_cluster = 1 - non_player_cluster
-
-        player_color = kmeans.cluster_centers_[player_cluster]
-
+        if kmeans is None:
+            return None  # Return None if clustering failed
+        player_color = kmeans.cluster_centers_[0]
         return player_color
 
 
-    def assign_team_color(self,frame, player_detections):
-        
-        player_colors = []
-        for _, player_detection in player_detections.items():
-            bbox = player_detection["bbox"]
-            player_color =  self.get_player_color(frame,bbox)
-            player_colors.append(player_color)
+    def assign_team_color(self, frame, player_tracks):
+        team_colors = []
+        for player_id, track in player_tracks.items():
+            bbox = track['bbox']
+            player_color = self.get_player_color(frame, bbox)
+            if player_color is not None:
+                team_colors.append(player_color)
+
+        if len(team_colors) < 2:
+            print("Not enough valid player colors found to assign teams.")
+            return
         
         kmeans = KMeans(n_clusters=2, init="k-means++",n_init=10)
         kmeans.fit(player_colors)
