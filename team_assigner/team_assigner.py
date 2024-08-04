@@ -5,7 +5,6 @@ class TeamAssigner:
         self.team_colors = {}
         self.player_team_dict = {}
     
-    class TeamAssigner:
     def get_clustering_model(self, image):
         image_2d = image.reshape(-1, 3)
         if image_2d.shape[0] == 0:
