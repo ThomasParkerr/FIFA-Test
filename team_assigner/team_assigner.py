@@ -63,7 +63,7 @@ class TeamAssigner:
             return
         
         kmeans = KMeans(n_clusters=2, init="k-means++",n_init=10)
-        kmeans.fit(player_colors)
+        kmeans.fit(player_color)
 
         self.kmeans = kmeans
 
