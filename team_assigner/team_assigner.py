@@ -6,22 +6,46 @@ class TeamAssigner:
         self.player_team_dict = {}
     
     def get_clustering_model(self, image):
-        image_2d = image.reshape(-1, 3)
-        if image_2d.shape[0] == 0:
-            return None  # Return None if the image is empty
-        kmeans = KMeans(n_clusters=1, n_init=10)
-        kmeans.fit(image_2d)
+        # This method should return a KMeans model trained on the image data.
+        if image.size == 0:
+            return None
+        # Flatten the image and apply KMeans clustering (example parameters)
+        pixels = image.reshape(-1, 3)
+        kmeans = KMeans(n_clusters=1, random_state=0).fit(pixels)
         return kmeans
 
     def get_player_color(self, frame, bbox):
+        # Ensure bbox values are integers
         x, y, w, h = bbox
+        x, y, w, h = map(int, [x, y, w, h])
+
+        # Debugging print statements
+        print(f"Bounding box values - x: {x}, y: {y}, w: {w}, h: {h}")
+
+        # Check frame boundaries to avoid index errors
+        height, width = frame.shape[:2]
+        x = max(0, min(x, width - 1))
+        y = max(0, min(y, height - 1))
+        w = max(1, min(w, width - x))
+        h = max(1, min(h, height - y))
+
+        # Debugging print statements
+        print(f"Adjusted bounding box values - x: {x}, y: {y}, w: {w}, h: {h}")
+
+        # Crop the player image from the frame
         player_image = frame[y:y+h, x:x+w]
         if player_image.size == 0:
             return None  # Return None if the cropped image is empty
+
+        # Extract the top half of the player image
         top_half_image = player_image[:h//2, :, :]
+
+        # Get the KMeans model for clustering
         kmeans = self.get_clustering_model(top_half_image)
         if kmeans is None:
             return None  # Return None if clustering failed
+
+        # Return the color of the first cluster center
         player_color = kmeans.cluster_centers_[0]
         return player_color
 
